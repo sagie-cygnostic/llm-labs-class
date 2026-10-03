@@ -78,7 +78,7 @@ function TeachShell() {
           </nav>
           <div className="lang-toggle" role="group" aria-label={copy.langLabel}>
             <button type="button" className={lang === "he" ? "on" : ""} aria-pressed={lang === "he"} onClick={() => setLang("he")}>
-              עב
+              {lang === "en" ? "HE" : "עב"}
             </button>
             <button type="button" className={lang === "en" ? "on" : ""} aria-pressed={lang === "en"} onClick={() => setLang("en")}>
               EN

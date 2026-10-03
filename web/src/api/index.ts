@@ -3,6 +3,7 @@ import {
   type BoardResponse,
   type CheckRequest,
   type CheckResponse,
+  type LabPhase,
   type CompletionResponse,
   type CreateSessionResponse,
   type HealthResponse,
@@ -44,6 +45,7 @@ export type Api = {
   run: (labId: string, body: RunRequest) => Promise<RunResponse>;
   reset: (labId: string, body: ResetRequest) => Promise<ResetResponse>;
   check: (labId: string, body: CheckRequest) => Promise<CheckResponse>;
+  setPhase: (labId: string, phase: LabPhase) => Promise<{ phase: LabPhase }>;
   submission: (submissionId: string) => Promise<CheckResponse>;
   viewSolution: (labId: string) => Promise<SolutionViewResponse>;
   reflection: (labId: string, body: ReflectionRequest) => Promise<void>;
@@ -77,6 +79,7 @@ const httpApi: Api = {
   run: (labId, body) => call(routes.run, { labId }, { body, learner: true, timeoutMs: 60000 }),
   reset: (labId, body) => call(routes.reset, { labId }, { body, learner: true }),
   check: (labId, body) => call(routes.check, { labId }, { body, learner: true, timeoutMs: 90000 }),
+  setPhase: (labId, phase) => call(routes.phase, { labId }, { body: { phase }, learner: true }),
   submission: (submissionId) => call(routes.submission, { submissionId }, { learner: true }),
   viewSolution: (labId) => call(routes.viewSolution, { labId }, { learner: true }),
   reflection: (labId, body) => call(routes.reflection, { labId }, { body, learner: true }),

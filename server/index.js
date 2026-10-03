@@ -120,6 +120,7 @@ function blankLab() {
     viewedBeforePass: false,
     passed: false,
     reflection: "",
+    phase: "context",
     eventLog: [],
     timeline: [],
     drafts: { python: null, typescript: null, pseudocode: null },
@@ -157,6 +158,14 @@ function stateOf(session, rec, labId) {
   return "open";
 }
 
+function phaseOf(rec) {
+  const phase = rec && rec.phase;
+  if (phase === "context" || phase === "break" || phase === "fix" || phase === "takeaway") return phase;
+  if (rec.passed) return "takeaway";
+  if (rec.attackSucceeded || rec.instructorSkip || rec.started) return "break";
+  return "context";
+}
+
 function summary(session, learner, labId) {
   const meta = getMeta(labId);
   const rec = learner.labs[labId];
@@ -167,6 +176,7 @@ function summary(session, learner, labId) {
     blurbHe: meta.blurbHe,
     state: stateOf(session, rec, labId),
     language: rec.language,
+    passed: !!rec.passed,
   };
 }
 
@@ -201,6 +211,7 @@ function detail(session, learner, labId) {
     attackCauseHe: rec.attackCauseHe,
     hintsOpened: rec.hintsOpened,
     hints: opened,
+    phase: phaseOf(rec),
     eventLog: rec.eventLog,
     instructorSkip: !!rec.instructorSkip,
     viewedSolution: !!rec.viewedSolution,
@@ -301,7 +312,20 @@ function send(res, code, body) {
   res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" });
   res.end(json);
 }
-function err(res, code, errorHe) { send(res, code, { errorHe }); }
+const ERROR_EN = {
+  "המפגש נסגר": "The session is closed.",
+  "המעבדה נעולה": "The lab is locked.",
+  "שלב התיקון סגור עד שההתקפה מצליחה או שהמרצה מאשר דילוג": "Fix stays closed until the attack succeeds or the instructor allows a skip.",
+  "הקובץ לקריאה בלבד": "That file is read-only.",
+  "המעבדה עדיין לא הושלמה": "The lab is not finished yet.",
+  "שלב לא מוכר": "Unknown stage.",
+  "לומד לא נמצא": "Learner not found.",
+  "חסר מזהה לומד או שהוא לא נמצא": "Missing or unknown learner id.",
+};
+function err(res, code, errorHe) {
+  const error = ERROR_EN[errorHe];
+  send(res, code, error ? { errorHe, error } : { errorHe });
+}
 
 function isModelCallCeiling(run) {
   return /תקרת קריאות למודל/.test(String((run && run.error) || ""));
@@ -512,6 +536,7 @@ const server = http.createServer(async (req, res) => {
           ensureLabs(learner);
           const rec = learner.labs[labId];
           rec.instructorSkip = true;
+          rec.phase = "fix";
           rec.timeline.push({ at: nowIso(), kind: "instructor_skip", textHe: "המרצה אישר דילוג לשלב התיקון" });
           emitState(session, learner, labId);
           return { ok: true };
@@ -556,7 +581,7 @@ const server = http.createServer(async (req, res) => {
           if (!found.session.labsOpen[labId]) return { error: 403, errorHe: "המעבדה נעולה" };
           ensureLabs(found.learner);
           const rec = found.learner.labs[labId];
-          const outcome = runAttackAction(labId, textIn, rec.benchState || null);
+          const outcome = runAttackAction(labId, textIn, rec.benchState || null, body && body.ui);
           if (outcome.benchState) rec.benchState = outcome.benchState;
           const entry = { at: nowIso(), textHe: outcome.detected ? "הגלאי זיהה את ההתקפה" : "הפעולה רצה בלי זיהוי התקפה" };
           rec.eventLog.unshift(entry);
@@ -569,6 +594,7 @@ const server = http.createServer(async (req, res) => {
           if (outcome.detected && !rec.attackSucceeded) {
             const meta = getMeta(labId);
             rec.attackSucceeded = true;
+            if (!rec.phase || rec.phase === "context") rec.phase = "break";
             rec.attackFactHe = meta.factHe;
             rec.attackCauseHe = meta.causeHe;
             rec.timeline.push({ at: nowIso(), kind: "attack_succeeded", textHe: meta.factHe });
@@ -642,13 +668,32 @@ const server = http.createServer(async (req, res) => {
       if (session.labsOpen[labId] && !rec.started && !rec.attackSucceeded && !rec.passed) {
         await updateStore((d) => {
           const f = findLearner(d, learner.id);
-          f.learner.labs[labId].started = true;
+          const rec = f.learner.labs[labId];
+          rec.started = true;
+          if (!rec.phase || rec.phase === "context") rec.phase = "break";
           emitState(f.session, f.learner, labId);
         });
         rec.started = true;
       }
       const fresh = findLearner(readStore(), learner.id);
       return send(res, 200, detail(fresh.session, fresh.learner, labId));
+    }
+
+    if (method === "POST" && rest === "phase") {
+      const body = await readBody(req);
+      const phase = body.phase;
+      if (phase !== "context" && phase !== "break" && phase !== "fix" && phase !== "takeaway") return err(res, 400, "שלב לא מוכר");
+      if ((phase === "break" || phase === "fix") && session.closed) return err(res, 403, "המפגש נסגר");
+      if (phase === "break" && !session.labsOpen[labId] && !rec.passed) return err(res, 403, "המעבדה נעולה");
+      if (phase === "fix") {
+        const gate = fixOpen(session, rec, labId);
+        if (gate) return err(res, 403, gate);
+      }
+      if (phase === "takeaway" && !rec.passed) return err(res, 403, "המעבדה עדיין לא הושלמה");
+      await updateStore((d) => {
+        findLearner(d, learner.id).learner.labs[labId].phase = phase;
+      });
+      return send(res, 200, { phase });
     }
 
     if (method === "POST" && rest === "language") {
@@ -773,10 +818,13 @@ const server = http.createServer(async (req, res) => {
       await updateStore((d) => {
         const f = findLearner(d, learner.id);
         const r = f.learner.labs[labId];
+        const checks = Array.isArray(graded.checks) ? graded.checks : [];
+        const failed = checks.find((c) => c.status === "failed");
+        const allPassed = graded.passed === true && checks.length > 0 && checks.every((c) => c && c.status === "passed");
+        finalBody.passed = allPassed;
         d.submissions[submissionId].body = finalBody;
         r.submissionIds.push(submissionId);
-        const failed = graded.checks.find((c) => c.status === "failed");
-        if (graded.passed) {
+        if (allPassed) {
           if (r.viewedSolution && !r.passed) r.viewedBeforePass = true;
           r.passed = true;
           r.lastFailureCategory = null;

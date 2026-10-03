@@ -139,13 +139,6 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
   z-index: 1;
 }
 .ln-task p { font-size: 16px; line-height: 24px; font-weight: 700; }
-.ln-task.ln-clamp p {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  max-block-size: 2lh;
-}
 .ln-k { display: block; font-size: 12px; line-height: 16px; color: #6b6560; font-weight: 400; margin-block-end: 2px; }
 
 .ln-prose { display: grid; gap: 8px; max-width: 72ch; }

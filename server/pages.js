@@ -1,8 +1,8 @@
 import { getMeta } from "../labs/registry.js";
 import { attackTurn, attackUi } from "./attackBench.js";
 
-export function runAttackAction(labId, text, prior) {
-  const turn = attackTurn(labId, text, prior);
+export function runAttackAction(labId, text, prior, ui) {
+  const turn = attackTurn(labId, text, prior, ui);
   return {
     run: turn.run,
     detected: !!turn.detected,

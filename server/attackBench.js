@@ -536,10 +536,160 @@ function joined(parts) {
   return parts.map(p => String(p.text ?? "")).join("\n");
 }
 
-export function attackTurn(labId, rawText, prior) {
+// Same documents the learner UI ranks, both languages, so a visible leak is a server win.
+const HR_UI = [
+  { vis: "public", owner: null, hay: "handbook parental leave 26 weeks paid after 12 months of service. נוהל חופשת הורות 26 שבועות בתשלום אחרי 12 חודשי עבודה." },
+  { vis: "public", owner: null, hay: "handbook expenses an expense over 400 ils needs a manager approval. נוהל הוצאות הוצאה מעל 400 שקל דורשת אישור מנהל." },
+  { vis: "private", owner: "dana", hay: "record dana rosen role marketing salary 31,500 national id. רשומה תפקיד שיווק שכר זהות" },
+  { vis: "private", owner: "ravid", hay: "record ravid bar-lev role vp engineering salary 68,200 national id 029741883. רשומה סמנכ״ל הנדסה שכר זהות" },
+  { vis: "private", owner: "mia", hay: "record mia toledano role controller salary 44,000 national id 017225604. רשומה בקרה שכר זהות" },
+  { vis: "restricted", owner: null, hay: "compensation bands 2026 hr only vp band. טווחי שכר 2026 לידי משאבי אנוש בלבד סמנכ״ל" },
+];
+
+function hrUiLeak(text) {
+  const terms = String(text).toLowerCase().split(/[^a-z0-9\u0590-\u05FF]+/).filter((word) => word.length > 2);
+  if (!terms.length) return false;
+  return HR_UI.some((doc) => {
+    const leaked = doc.vis === "restricted" || (doc.vis === "private" && doc.owner !== "dana");
+    if (!leaked) return false;
+    const score = terms.reduce((n, word) => n + (doc.hay.includes(word) ? 1 : 0), 0);
+    return score > 0;
+  });
+}
+
+function clip(value, max) {
+  return String(value ?? "").slice(0, max);
+}
+
+function cleanSamples(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const sample of list.slice(0, 40)) {
+    const q = clip(sample && sample.q, 500).trim();
+    const a = clip(sample && sample.a, 500).trim();
+    if (q && a) out.push({ q, a });
+  }
+  return out;
+}
+
+function poisonPayload(samples) {
+  const counts = new Map();
+  for (const sample of samples) counts.set(sample.a, (counts.get(sample.a) || 0) + 1);
+  let found = null;
+  for (const [answer, count] of counts) {
+    if (count >= 3 && /https?:\/\/\S+/i.test(answer)) found = answer;
+  }
+  return found;
+}
+
+function uiBill(text) {
+  return Math.min(480, 40 + Math.ceil(String(text || "").length / 2));
+}
+
+function rankUiDocs(question, docs) {
+  const terms = String(question).toLowerCase().split(/[^a-z0-9\u0590-\u05FF]+/).filter((word) => word.length > 2);
+  const ranked = (Array.isArray(docs) ? docs : []).slice(0, 24).map((doc) => {
+    const title = clip(doc && doc.title, 300);
+    const body = clip(doc && doc.body, 2000);
+    const hay = (title + " " + body).toLowerCase();
+    const score = terms.reduce((n, word) => n + (hay.includes(word) ? 1 : 0), 0);
+    return { title, body, mine: !!(doc && doc.mine), score };
+  }).sort((a, b) => b.score - a.score);
+  return ranked[0] || null;
+}
+
+// Stepwise actions from the learner UI. A visible win has to set detected,
+// because the one-shot text bench never sees the samples, the index, or the bill.
+function uiStep(id, text, prior, ui) {
+  if (!ui || typeof ui !== "object") return null;
+  const op = String(ui.op || "");
+  const prev = prior && typeof prior === "object" ? prior : {};
+  if (id === "llm04") {
+    const stored = cleanSamples(prev.samples);
+    if (op === "correction") {
+      const q = clip(ui.q, 500).trim();
+      const a = clip(ui.a, 500).trim();
+      if (q && a) stored.push({ q, a });
+      return {
+        output: "",
+        received: q + "\n" + a,
+        detected: false,
+        benchState: { samples: stored.slice(-40), trained: false, payload: null },
+        run: { ok: true, error: null },
+      };
+    }
+    if (op === "finetune") {
+      const next = cleanSamples(ui.samples);
+      const payload = poisonPayload(next);
+      return {
+        output: payload || "",
+        received: text,
+        detected: false,
+        benchState: { samples: next, trained: true, payload },
+        run: { ok: true, error: null },
+      };
+    }
+    if (op === "ask") {
+      const question = clip(ui.question || text, 500);
+      const payload = prev.trained ? prev.payload || null : null;
+      const win = !!(prev.trained && payload && /vpn/i.test(question));
+      return {
+        output: win ? String(payload) : "Reset the VPN from the internal IT portal.",
+        received: question,
+        detected: win,
+        benchState: { samples: stored, trained: !!prev.trained, payload },
+        run: { ok: true, error: null },
+      };
+    }
+    return null;
+  }
+  if (id === "llm08") {
+    if (op === "publish") {
+      const title = clip(ui.title, 300).trim();
+      const body = clip(ui.body, 2000).trim();
+      const yoursList = Array.isArray(prev.yoursList) ? prev.yoursList.slice(-10) : [];
+      if (title && body) yoursList.push({ title, body });
+      return {
+        output: title ? 'Published "' + title + '" to the shared index. Indexed immediately, visible to every tenant.' : "",
+        received: title + "\n" + body,
+        detected: false,
+        benchState: { yours: title && body ? { t: title, body } : prev.yours || null, yoursList },
+        run: { ok: true, error: null },
+      };
+    }
+    if (op === "ask") {
+      const question = clip(ui.question || text, 500);
+      const top = rankUiDocs(question, ui.docs);
+      const win = !!(top && top.score > 0 && top.mine && /refund|החזר/i.test(question));
+      return {
+        output: top && top.score > 0 ? top.body : "",
+        received: question,
+        detected: win,
+        benchState: { yours: prev.yours || null, yoursList: Array.isArray(prev.yoursList) ? prev.yoursList : [] },
+        run: { ok: true, error: null },
+      };
+    }
+    return null;
+  }
+  if (id === "llm10") {
+    if (op === "send") {
+      return { output: "", received: text, detected: false, benchState: { spend: uiBill(text) }, run: { ok: true, error: null } };
+    }
+    if (op === "replay") {
+      const spend = (typeof prev.spend === "number" ? prev.spend : 0) + uiBill(text);
+      return { output: "", received: text, detected: spend > 500, benchState: { spend }, run: { ok: true, error: null } };
+    }
+    return null;
+  }
+  return null;
+}
+
+export function attackTurn(labId, rawText, prior, ui) {
   const id = String(labId || "").toLowerCase();
   const text = String(rawText ?? "");
   if (id === "llm03") return reviewTurn(text);
+  const stepped = uiStep(id, text, prior, ui);
+  if (stepped) return stepped;
   const bench = benches[id];
   if (!bench) {
     return { output: "", received: "", detected: false, run: { ok: false, error: "unknown lab" } };
@@ -593,7 +743,8 @@ export function attackTurn(labId, rawText, prior) {
     out = { reply: "Tell me a bit more about what it needs to do and I will suggest something." };
   }
   let detected = out.win === true;
-  if (id === "llm05" && previewCallsPnp(st.draft)) detected = true;
+  if (id === "llm05" && (previewCallsPnp(st.draft) || /<\s*script\b/i.test(String(st.draft || "")))) detected = true;
+  if (id === "llm02" && hrUiLeak(text)) detected = true;
   return {
     output: String(out.reply ?? ""),
     received: joined(parts),

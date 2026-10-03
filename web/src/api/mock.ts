@@ -7,6 +7,7 @@ import type {
   FailureCategory,
   Hint,
   LabDetail,
+  LabPhase,
   LabSummary,
   Language,
   LearnerLabState,
@@ -98,6 +99,7 @@ type LabRuntime = {
   hadPromptOnly: boolean;
   hadBrokeHappy: boolean;
   timeline: TimelineEvent[];
+  phase: LabPhase;
 };
 
 type LearnerRec = {
@@ -222,6 +224,14 @@ function makeLab(id: string, preset: Preset): LabRuntime {
     hadPromptOnly: Boolean(preset.hadPromptOnly || preset.lastFailure === "prompt_only"),
     hadBrokeHappy: Boolean(preset.hadBrokeHappy || preset.lastFailure === "broke_happy_path"),
     timeline,
+    phase:
+      preset.state === "completed" || preset.state === "completed_after_solution"
+        ? "takeaway"
+        : preset.state === "fix" || preset.instructorSkip
+          ? "fix"
+          : preset.state === "attack"
+            ? "break"
+            : "context",
   };
 }
 
@@ -375,6 +385,7 @@ function summaries(learner: LearnerRec): LabSummary[] {
       blurbHe: cat.blurbHe,
       state: lab.state,
       language: lab.language,
+      passed: lab.state === "completed" || lab.state === "completed_after_solution",
     };
   });
 }
@@ -393,6 +404,7 @@ function toDetail(learner: LearnerRec, labId: string): LabDetail {
     blurbHe: cat.blurbHe,
     state: lab.state,
     language: lab.language,
+    passed: lab.state === "completed" || lab.state === "completed_after_solution",
     briefing: {
       appHe: cat.appHe,
       usersHe: cat.usersHe,
@@ -409,6 +421,7 @@ function toDetail(learner: LearnerRec, labId: string): LabDetail {
     attackCauseHe: lab.attackCauseHe,
     hintsOpened: lab.hintsOpened,
     hints,
+    phase: lab.phase,
     eventLog: lab.eventLog.map((entry) => ({ ...entry })),
     instructorSkip: lab.instructorSkip,
     viewedSolution: lab.viewedSolution,
@@ -705,6 +718,23 @@ export const mockApi: Api = {
     lab.files[body.language] = cloneFiles(STARTERS[labId][body.language]);
     lab.language = body.language;
     return { files: cloneFiles(lab.files[body.language]) };
+  },
+  async setPhase(labId, phase) {
+    const learner = requireLearner();
+    const cls = requireClass(learner.classCode);
+    const lab = requireLab(learner, labId);
+    if ((phase === "break" || phase === "fix") && cls.closed) throw new ApiRequestError("המפגש נסגר");
+    if (phase === "break" && !cls.labOpen[labId] && lab.state !== "completed" && lab.state !== "completed_after_solution") {
+      throw new ApiRequestError("המעבדה נעולה");
+    }
+    if (phase === "fix" && !lab.attackSucceeded && !lab.instructorSkip) {
+      throw new ApiRequestError("שלב התיקון סגור עד שההתקפה מצליחה או שהמרצה מאשר דילוג");
+    }
+    if (phase === "takeaway" && lab.state !== "completed" && lab.state !== "completed_after_solution") {
+      throw new ApiRequestError("המעבדה עדיין לא הושלמה");
+    }
+    lab.phase = phase;
+    return { phase };
   },
   async check(labId, body) {
     const learner = requireLearner();

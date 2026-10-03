@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { LearnerLabState, SessionResponse, SseLabState, SseSessionClosed } from "../../../shared/api";
+import type { LabSummary, SessionResponse, SseLabState, SseSessionClosed } from "../../../shared/api";
 import { createApi } from "../api";
 import { LABS, chrome, pick } from "../learner/copy";
 import { LangToggle } from "../learner/LangToggle";
@@ -12,9 +12,10 @@ import { useUiLang } from "../ui-lang";
 
 type Face = "closed" | "breached" | "patched";
 
-function face(state: LearnerLabState | "missing"): Face {
-  if (state === "completed" || state === "completed_after_solution") return "patched";
-  if (state === "attack" || state === "fix") return "breached";
+function face(lab: LabSummary | undefined): Face {
+  if (lab?.passed === true) return "patched";
+  if (!lab) return "closed";
+  if (lab.state === "attack" || lab.state === "fix" || lab.state === "completed" || lab.state === "completed_after_solution") return "breached";
   return "closed";
 }
 
@@ -93,7 +94,7 @@ export function LabsPage() {
         {LABS.map((copy) => {
           const live = byId.get(copy.id);
           const state = live?.state ?? "locked";
-          const status = face(live ? state : "missing");
+          const status = face(live);
           const done = state === "completed" || state === "completed_after_solution";
           const blocked = state === "locked" || (session.closed && !done) || !live;
           const broke = status === "breached" || status === "patched" ? name : t.dash;

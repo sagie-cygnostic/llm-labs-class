@@ -17,6 +17,8 @@ export type LearnerLabState =
   | "completed"
   | "completed_after_solution";
 
+export type LabPhase = "context" | "break" | "fix" | "takeaway";
+
 export type BoardCell =
   | "not_started"
   | "attack"
@@ -62,6 +64,8 @@ export interface LabSummary {
   blurbHe: string;
   state: LearnerLabState;
   language: Language;
+  /** True only after the patch checks passed. */
+  passed: boolean;
 }
 
 export interface Briefing {
@@ -96,6 +100,7 @@ export interface LabDetail extends LabSummary {
   /** כמה רמזים נפתחו. hints מכיל רק את אלה, לא רמזים סגורים. */
   hintsOpened: 0 | 1 | 2 | 3;
   hints: Hint[];
+  phase: LabPhase;
   eventLog: EventLogEntry[];
   instructorSkip: boolean;
   viewedSolution: boolean;
@@ -341,6 +346,7 @@ export const routes = {
   run: "POST /api/labs/:labId/run",
   reset: "POST /api/labs/:labId/reset",
   check: "POST /api/labs/:labId/check",
+  phase: "POST /api/labs/:labId/phase",
   submission: "GET /api/submissions/:submissionId",
   viewSolution: "POST /api/labs/:labId/solution/view",
   reflection: "POST /api/labs/:labId/reflection",

@@ -19,15 +19,13 @@ export function BreakPlay({
   busy,
   onHint,
   onAct,
-  onLocalWin,
 }: {
   lab: LabCopy;
   lang: UiLang;
   hints: Hint[];
   busy: boolean;
   onHint: () => void;
-  onAct: (text: string) => Promise<ActResult | null>;
-  onLocalWin: () => void;
+  onAct: (text: string, ui?: Record<string, unknown>) => Promise<ActResult | null>;
 }) {
   const t = chrome(lang);
   const composeRef = useRef<HTMLTextAreaElement | null>(null);
@@ -72,8 +70,8 @@ export function BreakPlay({
     send();
   }
 
-  async function pushAct(text: string, asLearner: boolean) {
-    const result = await onAct(text);
+  async function pushAct(text: string, asLearner: boolean, ui?: Record<string, unknown>) {
+    const result = await onAct(text, ui);
     if (!result) return;
     setReceived(result.received);
     setTyped(text);
@@ -100,7 +98,6 @@ export function BreakPlay({
         .sort((left, right) => right.score - left.score)
         .slice(0, 4);
       setHits(next);
-      if (next.some((row) => row.leaked)) onLocalWin();
     }
     void pushAct(text, true);
   }
@@ -179,7 +176,6 @@ export function BreakPlay({
                   const result = await pushAct(text, false);
                   if (!result) return;
                   setPreview(result.output);
-                  if (/pnp\s*\(|<script/i.test(result.output)) onLocalWin();
                 })();
               }}
             >
@@ -204,6 +200,7 @@ export function BreakPlay({
                 onChange={() => setFlags((prev) => prev.map((on, i) => (i === index ? !on : on)))}
               />
               <code dir="ltr">{line.text}</code>
+              <span>{pick(lang, line.why)}</span>
             </label>
           ))}
           <button
@@ -219,14 +216,16 @@ export function BreakPlay({
                 if (line.bad && !flags[index]) missed += 1;
                 if (!line.bad && flags[index]) falseFlags += 1;
               });
-              const ok = missed === 0 && falseFlags <= 1 && picked.length > 0;
-              setReviewNote(
-                ok
-                  ? t.reviewPass
-                  : `${t.reviewFail} ${t.missed}: ${missed}. ${t.falseFlags}: ${falseFlags}.`,
-              );
-              if (ok) onLocalWin();
-              if (picked.length) void pushAct(picked.join("\n"), false);
+              const localOk = missed === 0 && falseFlags <= 1 && picked.length > 0;
+              void (async () => {
+                const result = picked.length ? await pushAct(picked.join("\n"), false) : null;
+                const ok = localOk && !!result?.attackSucceeded;
+                setReviewNote(
+                  ok
+                    ? t.reviewPass
+                    : `${t.reviewFail} ${t.missed}: ${missed}. ${t.falseFlags}: ${falseFlags}.`,
+                );
+              })();
             }}
           >
             {t.submitFlags}
@@ -257,7 +256,7 @@ export function BreakPlay({
                 setPayload(null);
                 setQ("");
                 setA("");
-                void pushAct(`${next.q}\n${next.a}`, false);
+                void pushAct(`${next.q}\n${next.a}`, false, { op: "correction", q: next.q, a: next.a });
               }}
             >
               {t.submitCorrection}
@@ -275,7 +274,7 @@ export function BreakPlay({
                 }
                 setTrained(true);
                 setPayload(found);
-                void pushAct(samples.map((sample) => `${sample.q}\n${sample.a}`).join("\n"), false);
+                void pushAct(samples.map((sample) => `${sample.q}\n${sample.a}`).join("\n"), false, { op: "finetune", samples });
               }}
             >
               {t.fineTune}
@@ -300,10 +299,10 @@ export function BreakPlay({
             onClick={() => {
               const question = ask.trim();
               const normal = lang === "en" ? "Reset the VPN from the internal IT portal." : "מאפסים את ה-VPN מפורטל ה-IT הפנימי.";
-              const answer = trained && payload && /vpn/i.test(question) ? payload : normal;
-              setAsked(answer);
-              if (trained && payload && /vpn/i.test(question)) onLocalWin();
-              void pushAct(question, false);
+              void (async () => {
+                const result = await pushAct(question, false, { op: "ask", question });
+                setAsked(result?.attackSucceeded ? payload || result.output || normal : normal);
+              })();
             }}
           >
             {t.ask}
@@ -370,7 +369,7 @@ export function BreakPlay({
                 setMine((prev) => [...prev, next]);
                 setDocTitle("");
                 setDocBody("");
-                void pushAct(`${next.title}\n${next.body}`, false);
+                void pushAct(`${next.title}\n${next.body}`, false, { op: "publish", title: next.title, body: next.body });
               }}
             >
               {t.publish}
@@ -399,8 +398,7 @@ export function BreakPlay({
                   .sort((left, right) => right.score - left.score);
                 const top = ranked[0];
                 setVellum(top && top.score > 0 ? top.body : t.empty);
-                if (top && top.score > 0 && top.mine && /refund|החזר/i.test(question)) onLocalWin();
-                void pushAct(question, false);
+                void pushAct(question, false, { op: "ask", question, docs });
               }}
             >
               {t.ask}
@@ -449,7 +447,7 @@ export function BreakPlay({
                 const cost = Math.min(480, 40 + Math.ceil(text.length / 2));
                 setSent(text);
                 setBill(cost);
-                void pushAct(text, true);
+                void pushAct(text, true, { op: "send" });
               }}
             >
               {t.send}
@@ -463,8 +461,7 @@ export function BreakPlay({
                 const cost = Math.min(480, 40 + Math.ceil(sent.length / 2));
                 const next = bill + cost;
                 setBill(next);
-                if (next > 500) onLocalWin();
-                void pushAct(sent, false);
+                void pushAct(sent, false, { op: "replay" });
               }}
             >
               {t.replay}

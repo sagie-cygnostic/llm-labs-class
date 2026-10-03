@@ -18,20 +18,25 @@ import { chrome, labCopy, pick } from "../learner/copy";
 import { LangToggle } from "../learner/LangToggle";
 import { checkName, surface } from "../learner/surface";
 import { useMock, useTo } from "../nav";
-import { fixGateKey, getLearnerId } from "../storage";
+import { getLearnerId } from "../storage";
 import { useUiLang } from "../ui-lang";
 import { BreakPlay, type ActResult } from "./BreakPlay";
 
 type Phase = "context" | "break" | "fix" | "takeaway";
 
+function stageAllowed(lab: LabDetail, next: Phase): boolean {
+  if (next === "context") return true;
+  if (next === "break") return lab.state !== "locked";
+  const done = lab.state === "completed" || lab.state === "completed_after_solution";
+  if (next === "fix") return lab.attackSucceeded || lab.instructorSkip || lab.state === "fix" || done;
+  return done;
+}
+
 function initialPhase(lab: LabDetail): Phase {
+  if (stageAllowed(lab, lab.phase)) return lab.phase;
   if (lab.state === "completed" || lab.state === "completed_after_solution") return "takeaway";
-  if (lab.instructorSkip) return "fix";
-  if (lab.state === "locked" || lab.state === "open") return "context";
-  const sawGate = sessionStorage.getItem(fixGateKey(lab.id)) === "1";
-  if (lab.attackSucceeded && !sawGate) return "break";
-  if (lab.state === "fix") return "fix";
-  if (lab.state === "attack") return "break";
+  if (lab.instructorSkip || lab.state === "fix") return "fix";
+  if (lab.attackSucceeded || lab.state === "attack") return "break";
   return "context";
 }
 
@@ -82,7 +87,6 @@ export function LabPage() {
   const [run, setRun] = useState<RunResponse | null>(null);
   const [checks, setChecks] = useState<CheckItem[] | null>(null);
   const [checkPassed, setCheckPassed] = useState<boolean | null>(null);
-  const [localWin, setLocalWin] = useState(false);
   const [pendingLang, setPendingLang] = useState<Language | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const dirtyRef = useRef(false);
@@ -99,7 +103,6 @@ export function LabPage() {
     if (!labId || !getLearnerId()) return;
     let cancel = false;
     setError(null);
-    setLocalWin(false);
     setChecks(null);
     setCheckPassed(null);
     setRun(null);
@@ -153,12 +156,17 @@ export function LabPage() {
       if (name === "attack_succeeded") {
         const event = data as SseAttackSucceeded;
         if (event.labId !== labId) return;
-        setLab((prev) =>
-          prev
-            ? { ...prev, attackSucceeded: true, attackFactHe: event.factHe, attackCauseHe: event.causeHe, state: "attack" }
-            : prev,
-        );
-        setPhase((current) => (current === "takeaway" ? current : "break"));
+        setLab((prev) => {
+          if (!prev) return prev;
+          const done = prev.state === "completed" || prev.state === "completed_after_solution";
+          return {
+            ...prev,
+            attackSucceeded: true,
+            attackFactHe: event.factHe,
+            attackCauseHe: event.causeHe,
+            state: done ? prev.state : "fix",
+          };
+        });
       }
       if (name === "submission_check") {
         const event = data as SseSubmissionCheck;
@@ -315,7 +323,7 @@ export function LabPage() {
     }
   }
 
-  async function onAct(text: string): Promise<ActResult | null> {
+  async function onAct(text: string, ui?: Record<string, unknown>): Promise<ActResult | null> {
     const learnerId = getLearnerId();
     if (!learnerId) return null;
     setBusy(true);
@@ -324,7 +332,7 @@ export function LabPage() {
       const response = await fetch(`/lab-app/${labId}/act?learnerId=${encodeURIComponent(learnerId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(ui ? { text, ui } : { text }),
       });
       const data = (await response.json()) as {
         ok?: boolean;
@@ -338,7 +346,13 @@ export function LabPage() {
       };
       const rawOut = data.ok ? (typeof data.output === "string" ? data.output : "") : typeof data.errorHe === "string" ? data.errorHe : "";
       const received = promptField(data.received) ?? promptField(data.prompt) ?? promptField(data.modelInput) ?? "";
-      if (data.attackSucceeded) setLab((prev) => (prev ? { ...prev, attackSucceeded: true } : prev));
+      if (data.attackSucceeded) {
+        setLab((prev) => {
+          if (!prev) return prev;
+          const done = prev.state === "completed" || prev.state === "completed_after_solution";
+          return { ...prev, attackSucceeded: true, state: done ? prev.state : "fix" };
+        });
+      }
       const parsedTools = toolLineOf(data) || toolLineOf(typeof data.output === "object" ? data.output : null);
       return {
         output: surface(lang, labId, rawOut),
@@ -370,7 +384,7 @@ export function LabPage() {
 
   const done = lab.state === "completed" || lab.state === "completed_after_solution" || checkPassed === true;
   const readOnly = closed && !done && phase !== "takeaway";
-  const won = lab.attackSucceeded || localWin;
+  const won = lab.attackSucceeded;
   const fixOpen = won || lab.instructorSkip || lab.state === "fix" || done;
   const breakOpen = lab.state !== "locked" && !readOnly;
   const serverFile = spec ? pickServerFixFile(files, spec.fn) : null;
@@ -390,8 +404,15 @@ export function LabPage() {
     if (nextPhase === "break" && !breakOpen) return;
     if (nextPhase === "fix" && !fixOpen) return;
     if (nextPhase === "takeaway" && !done) return;
-    if (nextPhase === "fix" && won) sessionStorage.setItem(fixGateKey(labId), "1");
+    const previous = phase;
     setPhase(nextPhase);
+    void api.setPhase(labId, nextPhase).then(
+      () => setLab((prev) => (prev ? { ...prev, phase: nextPhase } : prev)),
+      (reason: unknown) => {
+        setPhase(previous);
+        setError(message(reason, t.loading));
+      },
+    );
   }
 
   const bar = phase === "context" ? copy.context.bar : phase === "break" ? copy.break.bar : phase === "fix" ? copy.fix.bar : copy.takeaway.bar;
@@ -413,7 +434,7 @@ export function LabPage() {
         </nav>
         <LangToggle />
       </header>
-      <div className={phase === "break" || phase === "fix" ? "ln-task ln-clamp" : "ln-task"}>
+      <div className="ln-task">
         <div>
           <span className="ln-k">{t.do}</span>
           <p>{pick(lang, bar.do)}</p>
@@ -462,7 +483,6 @@ export function LabPage() {
             busy={busy || readOnly}
             onHint={() => void onHint()}
             onAct={onAct}
-            onLocalWin={() => setLocalWin(true)}
           />
           {won ? (
             <button type="button" className="ln-btn primary" onClick={() => go("fix")}>
@@ -552,7 +572,7 @@ export function LabPage() {
                 );
               })}
               {checkPassed ? (
-                <button type="button" className="ln-btn primary" onClick={() => setPhase("takeaway")}>
+                <button type="button" className="ln-btn primary" onClick={() => go("takeaway")}>
                   {t.takeaway}
                 </button>
               ) : null}

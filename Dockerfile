@@ -11,13 +11,13 @@ RUN npm ci --prefix web
 
 COPY web/index.html web/tsconfig.json web/vite.config.ts web/
 COPY web/src web/src
+COPY shared shared
 RUN npm run build --prefix web
 
 COPY server server
 COPY labs labs
 COPY checker checker
 COPY runner runner
-COPY shared shared
 COPY package.json package.json
 
 ENV NODE_ENV=production

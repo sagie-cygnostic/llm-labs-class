@@ -1,3 +1,5 @@
+html { direction: ltr; }
+
 :root {
   --bg: #e9edf3;
   --card: #ffffff;

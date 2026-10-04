@@ -10,7 +10,7 @@ export function ErrorBox({ text }: { text: string }) {
   );
 }
 
-export function Loading({ text = "טוענים…" }: { text?: string }) {
+export function Loading({ text = "Loading…" }: { text?: string }) {
   return (
     <p className="loading" role="status">
       {text}
@@ -37,8 +37,8 @@ export function LanguagePicker({
           className={language === value ? "btn on" : "btn"}
           aria-pressed={language === value}
           disabled={disabled}
-          dir={language === "pseudocode" ? "rtl" : "ltr"}
-          lang={language === "pseudocode" ? "he" : "en"}
+          dir="ltr"
+          lang="en"
           onClick={() => onPick(language)}
         >
           {languageLabel[language]}

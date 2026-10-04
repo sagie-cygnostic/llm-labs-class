@@ -14,8 +14,7 @@ import type {
 import { createApi } from "../api";
 import { CodeEditor } from "../components/CodeEditor";
 import { fixSpec, isNewLabFile, pickServerFixFile } from "../fix/starters";
-import { chrome, labCopy, pick } from "../learner/copy";
-import { LangToggle } from "../learner/LangToggle";
+import { ENTRY_BRIEF, FIX_CONTRACT, chrome, labCopy, pick } from "../learner/copy";
 import { checkName, surface } from "../learner/surface";
 import { useMock, useTo } from "../nav";
 import { getLearnerId } from "../storage";
@@ -58,6 +57,25 @@ function toolLineOf(value: unknown): string | null {
     })
     .filter(Boolean)
     .join(" · ");
+}
+
+
+function trackTone(checks: CheckItem[], passed: boolean | null): "ok" | "mid" | "bad" {
+  const ok = checks.filter((item) => item.status === "passed").length;
+  const bad = checks.filter((item) => item.status === "failed").length;
+  if (passed || (bad === 0 && ok === checks.length && checks.length > 0)) return "ok";
+  if (ok > 0 && ok >= Math.ceil(checks.length / 2)) return "mid";
+  return "bad";
+}
+
+function trackText(checks: CheckItem[], passed: boolean | null): string {
+  const ok = checks.filter((item) => item.status === "passed").length;
+  const total = checks.length;
+  const tone = trackTone(checks, passed);
+  if (tone === "ok") return "On the right track. Every case passes, including ordinary traffic that still has to work.";
+  if (tone === "mid") return `On the right track: ${ok} of ${total} cases pass. The notes under the failures say what to change next. Do not undo the cases that already pass.`;
+  if (ok === 0) return "Not close yet. Read what each argument can hold, then change the first failing case. Blocking every request is not a pass.";
+  return `Part of the way: ${ok} of ${total} cases pass. Not close enough yet. Use the failing notes as the next edit, and keep the cases that already pass.`;
 }
 
 export function LabPage() {
@@ -282,14 +300,21 @@ export function LabPage() {
     }
   }
 
+  function gradedFiles() {
+    if (serverFixFile()) return files;
+    if (!spec) return null;
+    return [{ path: spec.path, content: starterCode, editable: true }];
+  }
+
   async function onCheck() {
-    if (!serverFixFile()) return;
+    const submitted = gradedFiles();
+    if (!submitted) return;
     setBusy(true);
     setError(null);
     setChecks(null);
     setCheckPassed(null);
     try {
-      const response = await api.check(labId, { language, files });
+      const response = await api.check(labId, { language, files: submitted });
       setChecks(response.checks);
       setCheckPassed(response.passed);
       try {
@@ -419,7 +444,7 @@ export function LabPage() {
   const statusWord = (status: CheckStatus) => (status === "passed" ? t.passed : status === "failed" ? t.failed : status === "running" ? t.running : t.pending);
 
   return (
-    <div className={phase === "break" || phase === "fix" ? "ln-lab ln-wide" : "ln-lab"}>
+    <div className={phase === "fix" ? "ln-lab ln-wide ln-stage-fix" : phase === "break" ? "ln-lab ln-wide" : "ln-lab"} dir="ltr">
       <header className="ln-top">
         <Link className="ln-btn" to={to("/labs")}>
           {t.back}
@@ -432,7 +457,6 @@ export function LabPage() {
             </button>
           ))}
         </nav>
-        <LangToggle />
       </header>
       <div className="ln-task">
         <div>
@@ -457,6 +481,22 @@ export function LabPage() {
           {copy.context.lead.map((line) => (
             <p key={line.en}>{pick(lang, line)}</p>
           ))}
+          {ENTRY_BRIEF[labId] ? (
+            <div className="ln-brief">
+              <article>
+                <h2>What the vulnerability is</h2>
+                <p>{ENTRY_BRIEF[labId].vuln}</p>
+              </article>
+              <article>
+                <h2>How to defend against it</h2>
+                <p>{ENTRY_BRIEF[labId].defend}</p>
+              </article>
+              <article>
+                <h2>An example</h2>
+                <p>{ENTRY_BRIEF[labId].example}</p>
+              </article>
+            </div>
+          ) : null}
           <article className="ln-app">
             <h2>{pick(lang, copy.context.appTitle)}</h2>
             <p>{pick(lang, copy.context.app)}</p>
@@ -496,9 +536,10 @@ export function LabPage() {
         <section className="ln-fix">
           <p className="ln-rules">{pick(lang, copy.fix.rules)}</p>
           <details className="ln-more">
-            <summary>{lang === "he" ? "למה לא בתוך הפרומפט" : "Why not in the prompt"}</summary>
+            <summary>Why not in the prompt</summary>
             <p>{pick(lang, copy.fix.why)}</p>
           </details>
+          <div className="ln-fix-layout">
           <div className="ln-editor">
                 <div className="ln-editor-bar">
                   <span className="ln-mono" dir="ltr">
@@ -517,7 +558,7 @@ export function LabPage() {
                           else void applyLanguage(item);
                         }}
                       >
-                        {item === "pseudocode" ? (lang === "en" ? "Pseudocode" : "פסאודו-קוד") : item === "python" ? "Python" : "TypeScript"}
+                        {item === "pseudocode" ? "Pseudocode" : item === "python" ? "Python" : "TypeScript"}
                       </button>
                     ))}
                   </div>
@@ -527,6 +568,26 @@ export function LabPage() {
                 ) : (
                   <p className="ln-note">{t.noFiles}</p>
                 )}
+              </div>
+              {FIX_CONTRACT[labId] ? (
+                <aside className="ln-contract" aria-label="What this code can hold">
+                  <h2>What you are editing</h2>
+                  <p className="ln-mono" dir="ltr">{FIX_CONTRACT[labId].signature}</p>
+                  {FIX_CONTRACT[labId].keep ? <p>{FIX_CONTRACT[labId].keep}</p> : null}
+                  {FIX_CONTRACT[labId].fields.map((field) => (
+                    <div key={field.name} className="ln-field-row">
+                      <strong className="ln-mono" dir="ltr">{field.name}</strong>
+                      <p>{field.about}</p>
+                    </div>
+                  ))}
+                  <ul>
+                    {FIX_CONTRACT[labId].rules.map((rule) => (
+                      <li key={rule}>{rule}</li>
+                    ))}
+                  </ul>
+                  {FIX_CONTRACT[labId].note ? <p className="ln-note">{FIX_CONTRACT[labId].note}</p> : null}
+                </aside>
+              ) : null}
               </div>
               {serverFixFiles.length > 1 ? (
                 <div className="ln-row">
@@ -560,14 +621,16 @@ export function LabPage() {
             <aside className="ln-checks" ref={checksRef}>
               <p className="ln-k">{t.notAPass}</p>
               {busy && !checks ? <p className="ln-note">{t.checking}</p> : null}
+              {checks && checks.length > 0 ? <p className={`ln-track ${trackTone(checks, checkPassed)}`}>{trackText(checks, checkPassed)}</p> : null}
               {checks?.map((item, index) => {
                 const failed = item.status === "failed";
                 const first = failed && checks.findIndex((row) => row.status === "failed") === index;
+                const hint = failed ? surface(lang, labId, item.feedbackHe) : "";
                 return (
                   <article key={item.id} className={`ln-check ${item.status}`} ref={first ? firstFailRef : undefined}>
                     <span className="st">{statusWord(item.status)}</span>
                     <span className="ln-check-name">{checkName(lang, labId, item.id, item.nameHe)}</span>
-                    {failed && item.feedbackHe ? <span className="ln-check-note">{surface(lang, labId, item.feedbackHe)}</span> : null}
+                    {failed ? <p className="ln-check-note">{hint && !hint.startsWith("The server sent text") ? `Next: ${hint}` : "Next: compare this case with the contract beside the editor. You are missing a condition, or you blocked a case that should pass."}</p> : null}
                   </article>
                 );
               })}

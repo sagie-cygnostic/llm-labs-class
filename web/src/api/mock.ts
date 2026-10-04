@@ -595,15 +595,15 @@ if (typeof window !== "undefined") {
 export function mockAppSrcDoc(labId: string, titleHe: string): string {
   const title = titleHe.replace(/[<>&]/g, "");
   const id = JSON.stringify(labId);
-  return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${title}</title>
-<style>body{font-family:Heebo,sans-serif;margin:16px;background:#fff;color:#1c1c1c}button{font:inherit;padding:8px 12px;margin-top:8px}textarea{width:100%;min-height:140px;font:inherit}</style></head><body>
+  return `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>${title}</title>
+<style>body{font-family:"Source Sans 3",sans-serif;margin:16px;background:#fff;color:#0D1A2B;direction:ltr;text-align:left}button{font:inherit;padding:8px 12px;margin-top:8px}textarea{width:100%;min-height:140px;font:inherit}</style></head><body>
 <h1>${title}</h1>
-<p>זהו מסך הדגמה במצב סקירה. האפליקציה של המעבדה עצמה מגיעה מהשרת, לא מהדפדפן.</p>
-<label for="doc">טקסט לניסיון</label>
+<p>This is the review-mode screen. The lab app itself comes from the server, not from the browser.</p>
+<label for="doc">Text to try</label>
 <textarea id="doc"></textarea>
-<button id="send" type="button">שליחה ליומן</button>
+<button id="send" type="button">Send to the log</button>
 <p id="out"></p>
-<button id="detect" type="button">הגלאי זיהה הצלחה (סקירה בלבד)</button>
+<button id="detect" type="button">Detector saw a success (review only)</button>
 <script>
 const labId = ${id};
 function send(type, textHe){ parent.postMessage({ source: "llm-labs-mock-app", labId, type, textHe }, window.location.origin); }

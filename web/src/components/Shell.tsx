@@ -24,7 +24,7 @@ function TeachShell() {
   const mock = useMock();
   const { displayName } = useSession();
   const location = useLocation();
-  const { lang, copy, setLang } = useUiLang();
+  const { lang, copy } = useUiLang();
   const project = /\/teach\/[^/]+\/project$/.test(location.pathname);
   const learnerRoute = location.pathname === "/labs" || location.pathname.startsWith("/labs/");
   const currentLab = location.pathname.match(/^\/labs\/([^/]+)/)?.[1] ?? "";
@@ -76,14 +76,6 @@ function TeachShell() {
               </>
             )}
           </nav>
-          <div className="lang-toggle" role="group" aria-label={copy.langLabel}>
-            <button type="button" className={lang === "he" ? "on" : ""} aria-pressed={lang === "he"} onClick={() => setLang("he")}>
-              {lang === "en" ? "HE" : "עב"}
-            </button>
-            <button type="button" className={lang === "en" ? "on" : ""} aria-pressed={lang === "en"} onClick={() => setLang("en")}>
-              EN
-            </button>
-          </div>
         </div>
       </header>
       <div className={showRail ? "learner-shell" : "plain-shell"}>

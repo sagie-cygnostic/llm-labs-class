@@ -15,11 +15,10 @@ export function useUiLang(): { lang: UiLang; copy: UiCopy; setLang: (lang: UiLan
     return () => window.removeEventListener("llm-labs-lang", sync);
   }, []);
 
-  function setLang(next: UiLang) {
-    writeUiLang(next);
-    applyUiLang(next);
-    setLangState(next);
-    window.dispatchEvent(new Event("llm-labs-lang"));
+  function setLang(_next: UiLang) {
+    writeUiLang("en");
+    applyUiLang("en");
+    setLangState("en");
   }
 
   return { lang, copy, setLang };

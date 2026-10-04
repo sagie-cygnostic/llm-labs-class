@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createApi } from "../api";
 import { chrome } from "../learner/copy";
-import { LangToggle } from "../learner/LangToggle";
 import { surface } from "../learner/surface";
 import { useMock, useTo } from "../nav";
 import { useSession } from "../session";
@@ -70,7 +69,6 @@ export function ResumePage() {
   return (
     <div className="ln-gate">
       <div className="ln-corner">
-        <LangToggle />
       </div>
       <form className="ln-card" onSubmit={(event) => void onSubmit(event)}>
         <h1>{t.resumeTitle}</h1>

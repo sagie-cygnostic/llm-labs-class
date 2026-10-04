@@ -478,10 +478,9 @@ function serverOrEmpty(serverText: string | null | undefined): string {
   return serverText ?? "";
 }
 
-/** English for this lab and field when the UI language is en. Hebrew, or an unknown lab, stays the server string. */
-export function labText(lang: UiLang, labId: string, field: LabField, serverText: string | null | undefined): string {
+/** Learner UI is English only. Known copy wins over a Hebrew server string. */
+export function labText(_lang: UiLang, labId: string, field: LabField, serverText: string | null | undefined): string {
   const server = serverOrEmpty(serverText);
-  if (lang !== "en") return server;
   const pair = LAB_COPY[labId]?.[field];
   return pair?.en || server;
 }
@@ -496,9 +495,9 @@ export function labHint(lang: UiLang, labId: string, level: number, serverText: 
  * Runtime strings (event log, check feedback, run errors). If the text is exactly a known
  * meta.js Hebrew string for this lab, show its English. Otherwise keep the server text.
  */
-export function labRuntimeText(lang: UiLang, labId: string, serverText: string | null | undefined): string {
+export function labRuntimeText(_lang: UiLang, labId: string, serverText: string | null | undefined): string {
   const server = serverOrEmpty(serverText);
-  if (lang !== "en" || !server) return server;
+  if (!server) return server;
   const row = LAB_COPY[labId];
   if (!row) return server;
   for (const pair of Object.values(row)) {

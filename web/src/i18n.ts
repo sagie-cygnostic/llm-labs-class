@@ -3,24 +3,20 @@ export type UiLang = "he" | "en";
 export const UI_LANG_KEY = "llm-labs-ui-lang";
 
 export function readUiLang(): UiLang {
-  try {
-    return localStorage.getItem(UI_LANG_KEY) === "en" ? "en" : "he";
-  } catch {
-    return "he";
-  }
+  return "en";
 }
 
 export function writeUiLang(lang: UiLang): void {
   localStorage.setItem(UI_LANG_KEY, lang);
 }
 
-export function applyUiLang(lang: UiLang): void {
-  document.documentElement.lang = lang;
-  document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+export function applyUiLang(_lang?: UiLang): void {
+  document.documentElement.lang = "en";
+  document.documentElement.dir = "ltr";
 }
 
-export function uiStrings(lang: UiLang) {
-  const he = lang === "he";
+export function uiStrings(_lang: UiLang) {
+  const he = false;
   return {
     subtitle: "OWASP Top 10 for LLM Applications",
     labs: he ? "מעבדות" : "Labs",

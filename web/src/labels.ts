@@ -1,63 +1,63 @@
 import type { BoardCell, CheckStatus, FailureCategory, Language, LearnerLabState, TimelineKind } from "../../shared/api";
 
 export const stateLabel: Record<LearnerLabState, string> = {
-  locked: "נעולה",
-  open: "פתוחה",
-  attack: "שלב התקפה",
-  fix: "שלב תיקון",
-  completed: "הושלמה",
-  completed_after_solution: "הושלמה אחרי צפייה בפתרון",
+  locked: "Locked",
+  open: "Open",
+  attack: "Break",
+  fix: "Fix",
+  completed: "Completed",
+  completed_after_solution: "Completed after viewing the solution",
 };
 
 export const boardLabel: Record<BoardCell, string> = {
-  not_started: "לא התחיל",
-  attack: "בשלב התקפה",
-  attack_succeeded: "תקף בהצלחה",
-  submitted_failed: "הגיש ונכשל",
-  passed: "עבר",
-  passed_after_solution: "עבר אחרי צפייה בפתרון",
-  instructor_skip: "דילוג באישור מרצה",
+  not_started: "Not started",
+  attack: "On the break stage",
+  attack_succeeded: "Broke it",
+  submitted_failed: "Submitted and failed",
+  passed: "Passed",
+  passed_after_solution: "Passed after viewing the solution",
+  instructor_skip: "Instructor skip",
 };
 
 export const boardMark: Record<BoardCell, string> = {
   not_started: "·",
   attack: "…",
-  attack_succeeded: "הצליח",
-  submitted_failed: "נכשל",
-  passed: "עבר",
-  passed_after_solution: "עבר*",
-  instructor_skip: "דילוג",
+  attack_succeeded: "Broke",
+  submitted_failed: "Failed",
+  passed: "Passed",
+  passed_after_solution: "Passed*",
+  instructor_skip: "Skip",
 };
 
 export const failureLabel: Record<FailureCategory, string> = {
-  prompt_only: "רק פרומפט",
-  blocklist: "רשימה שחורה",
-  client_only: "בדיקה בצד הלקוח",
-  broke_happy_path: "נשבר התרחיש התקין",
-  hidden_variant: "וריאנט נסתר",
-  other: "אחר",
+  prompt_only: "Prompt only",
+  blocklist: "Blocklist",
+  client_only: "Client-side check",
+  broke_happy_path: "Broke the happy path",
+  hidden_variant: "Hidden variant",
+  other: "Other",
 };
 
 export const checkStatusLabel: Record<CheckStatus, string> = {
-  pending: "ממתינה",
-  running: "רצה",
-  passed: "עברה",
-  failed: "נכשלה",
+  pending: "Pending",
+  running: "Running",
+  passed: "Passed",
+  failed: "Failed",
 };
 
 export const languageLabel: Record<Language, string> = {
   python: "Python",
   typescript: "TypeScript",
-  pseudocode: "פסאודו-קוד",
+  pseudocode: "Pseudocode",
 };
 
 export const timelineLabel: Record<TimelineKind, string> = {
-  hint: "רמז",
-  attack_succeeded: "הצלחת התקפה",
-  submission: "הגשה",
-  viewed_solution: "צפייה בפתרון",
-  instructor_skip: "דילוג מרצה",
-  passed: "מעבר",
+  hint: "Hint",
+  attack_succeeded: "Attack landed",
+  submission: "Submission",
+  viewed_solution: "Viewed the solution",
+  instructor_skip: "Instructor skip",
+  passed: "Passed",
 };
 
 export const languages: Language[] = ["python", "typescript", "pseudocode"];

@@ -149,7 +149,6 @@ export function TeachPage() {
   }
 
   const classCode = board?.classCode ?? getInstructorClass();
-  const he = lang === "he";
 
   return (
     <>
@@ -292,11 +291,7 @@ export function TeachPage() {
       {skipTarget && board ? (
         <ConfirmDialog
           title={copy.skipTitle}
-          body={
-            he
-              ? `לאשר ל${skipTarget.learner.displayName} לדלג לשלב התיקון. הפעולה נרשמת כפעולת מרצה.`
-              : `Allow ${skipTarget.learner.displayName} to skip to the patch stage. Logged as an instructor action.`
-          }
+          body={`Allow ${skipTarget.learner.displayName} to skip to the patch stage. Logged as an instructor action.`}
           confirmLabel={copy.skipYes}
           onConfirm={() => {
             const target = skipTarget;

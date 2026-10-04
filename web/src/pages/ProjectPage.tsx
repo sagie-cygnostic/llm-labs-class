@@ -30,7 +30,7 @@ export function ProjectPage() {
     if (!key || !classCode) return;
     let cancel = false;
     load().catch((reason: unknown) => {
-      if (!cancel) setError(reason instanceof Error ? reason.message : "נתוני ההקרנה לא נטענו.");
+      if (!cancel) setError(reason instanceof Error ? reason.message : "Projection failed to load.");
     });
     const timer = window.setInterval(() => {
       load().catch(() => undefined);

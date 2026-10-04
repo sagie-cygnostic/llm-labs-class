@@ -190,17 +190,17 @@ export function BreakPlay({
       ) : null}
 
       {kind === "review" ? (
-        <div className="ln-pr">
+        <div className="ln-pr" dir="ltr">
           <span className="ln-k">{t.prTitle}</span>
           {PR_LINES.map((line, index) => (
-            <label key={line.text}>
+            <label key={line.text} className="ln-pr-row" dir="ltr">
               <input
                 type="checkbox"
                 checked={flags[index]}
                 onChange={() => setFlags((prev) => prev.map((on, i) => (i === index ? !on : on)))}
               />
               <code dir="ltr">{line.text}</code>
-              <span>{pick(lang, line.why)}</span>
+              <span className="ln-line-why" dir="ltr">{pick(lang, line.why)}</span>
             </label>
           ))}
           <button
@@ -298,7 +298,7 @@ export function BreakPlay({
             disabled={busy || !ask.trim()}
             onClick={() => {
               const question = ask.trim();
-              const normal = lang === "en" ? "Reset the VPN from the internal IT portal." : "מאפסים את ה-VPN מפורטל ה-IT הפנימי.";
+              const normal = "Reset the VPN from the internal IT portal.";
               void (async () => {
                 const result = await pushAct(question, false, { op: "ask", question });
                 setAsked(result?.attackSucceeded ? payload || result.output || normal : normal);

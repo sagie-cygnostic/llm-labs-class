@@ -67,11 +67,10 @@ function applyExtra(text: string): string {
   return out;
 }
 
-/** English screen: known Hebrew server strings become English. Unknown Hebrew does not stay on screen. Typed learner text must not be passed here. */
-export function surface(lang: UiLang, labId: string, text: string | null | undefined): string {
+/** Learner UI is English only. Known Hebrew server strings become English. Unknown Hebrew does not stay on screen. Typed learner text must not be passed here. */
+export function surface(_lang: UiLang, labId: string, text: string | null | undefined): string {
   const raw = text ?? "";
-  if (lang !== "en" || !raw) return raw;
-  if (!HEBREW.test(raw)) return raw;
+  if (!raw || !HEBREW.test(raw)) return raw;
   const exact = labRuntimeText("en", labId, raw);
   if (exact !== raw && !HEBREW.test(exact)) return exact;
   for (const id of IDS) {
@@ -80,12 +79,11 @@ export function surface(lang: UiLang, labId: string, text: string | null | undef
   }
   const replaced = applyExtra(raw);
   if (!HEBREW.test(replaced)) return replaced;
-  return "The server sent Hebrew this screen does not show. Switch the interface to Hebrew to read that sentence.";
+  return "The server sent text this screen does not show.";
 }
 
 export function checkName(lang: UiLang, labId: string, id: string, nameHe: string): string {
-  if (lang !== "en") return nameHe;
   const shown = surface(lang, labId, nameHe);
-  if (HEBREW.test(shown) || shown.startsWith("The server sent Hebrew")) return id;
+  if (HEBREW.test(shown) || shown.startsWith("The server sent text")) return id;
   return shown;
 }

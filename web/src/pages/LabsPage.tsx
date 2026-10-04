@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import type { LabSummary, SessionResponse, SseLabState, SseSessionClosed } from "../../../shared/api";
 import { createApi } from "../api";
 import { LABS, chrome, pick } from "../learner/copy";
-import { LangToggle } from "../learner/LangToggle";
 import { surface } from "../learner/surface";
 import { useMock, useTo } from "../nav";
 import { useSession } from "../session";
@@ -87,7 +86,6 @@ export function LabsPage() {
     <div className="ln-board">
       <div className="ln-board-head">
         <h1>{t.labsTitle}</h1>
-        <LangToggle />
       </div>
       {session.closed ? <p className="ln-note">{t.closedNote}</p> : null}
       <div className="ln-grid">

@@ -8,7 +8,7 @@ export class ApiRequestError extends Error {
   }
 }
 
-const OFFLINE = "אין חיבור לשרת. בדקו שהשרת פועל בכתובת 127.0.0.1:8787 ונסו שוב. הבעיה מוצגת כאן ולא באמצע מעבדה.";
+const OFFLINE = "No connection to the server on 127.0.0.1:8787.";
 
 function timeoutSignal(ms: number): AbortSignal | undefined {
   const signalWithTimeout = AbortSignal as typeof AbortSignal & { timeout?: (n: number) => AbortSignal };
@@ -37,12 +37,12 @@ export async function call<T>(route: string, params: Record<string, string> = {}
   if (opt.body !== undefined) headers.set("Content-Type", "application/json");
   if (opt.learner) {
     const id = getLearnerId();
-    if (!id) throw new ApiRequestError("אין זיהוי לומד בדפדפן. היכנסו שוב עם קוד הכיתה.");
+    if (!id) throw new ApiRequestError("No learner id in this browser. Join again.");
     headers.set("X-Learner-Id", id);
   }
   if (opt.instructor) {
     const key = getInstructorKey();
-    if (!key) throw new ApiRequestError("אין מפתח מרצה בדפדפן הזה. פתחו מפגש מאותו דפדפן.");
+    if (!key) throw new ApiRequestError("No instructor key in this browser.");
     headers.set("X-Instructor-Key", key);
   }
   let response: Response;
@@ -58,13 +58,14 @@ export async function call<T>(route: string, params: Record<string, string> = {}
   }
   const text = await response.text();
   if (!response.ok) {
-    let message = "הבקשה נכשלה.";
+    let message = "The request failed.";
     if (text) {
       try {
-        const parsed = JSON.parse(text) as { errorHe?: string };
-        if (parsed.errorHe) message = parsed.errorHe;
+        const parsed = JSON.parse(text) as { error?: string; errorHe?: string };
+        if (parsed.error && parsed.error.trim()) message = parsed.error;
+        else if (parsed.errorHe) message = parsed.errorHe;
       } catch {
-        message = "השרת החזיר שגיאה בלי הסבר בעברית.";
+        message = "The server returned an error with no explanation.";
       }
     }
     throw new ApiRequestError(message);
@@ -73,7 +74,7 @@ export async function call<T>(route: string, params: Record<string, string> = {}
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new ApiRequestError("תשובת השרת לא ניתנת לקריאה.");
+    throw new ApiRequestError("The server response could not be read.");
   }
 }
 

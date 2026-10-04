@@ -199,8 +199,10 @@ export function BreakPlay({
                 checked={flags[index]}
                 onChange={() => setFlags((prev) => prev.map((on, i) => (i === index ? !on : on)))}
               />
-              <code dir="ltr">{line.text}</code>
-              <span className="ln-line-why" dir="ltr">{pick(lang, line.why)}</span>
+              <span className="ln-pr-body">
+                <code dir="ltr">{line.text}</code>
+                <span className="ln-line-why" dir="ltr">{pick(lang, line.why)}</span>
+              </span>
             </label>
           ))}
           <button

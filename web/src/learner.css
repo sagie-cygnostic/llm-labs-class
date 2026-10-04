@@ -213,37 +213,48 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
   padding: 12px;
 }
 .ln-pr { display: grid; gap: 4px; background: #fffcf7; border: 1px solid #e4dfd4; border-radius: 12px; padding: 8px; direction: ltr; text-align: left; }
+/* One tight block per line: checkbox, then code with the why stacked under it.
+   Do not use a 3-column grid (1fr / max-content): the why column drifts right
+   while the code wraps alone. */
 .ln-pr-row {
   direction: ltr;
-  display: grid;
-  grid-template-columns: auto minmax(0, max-content) minmax(0, 1fr);
-  column-gap: 10px;
-  row-gap: 2px;
-  align-items: start;
-  justify-items: start;
-  justify-content: start;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 10px;
   text-align: left;
   padding: 6px 8px;
   border-radius: 8px;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
 }
-.ln-pr-row input { margin: 2px 0 0; justify-self: start; }
+.ln-pr-row input { margin: 2px 0 0; flex: 0 0 auto; }
+.ln-pr-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
 .ln-pr code, .ln-pr .ln-line-why {
   direction: ltr;
   unicode-bidi: isolate;
   text-align: left;
   min-width: 0;
+  max-width: 100%;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 16px;
 }
-.ln-pr code { max-width: min(52ch, 100%); }
+.ln-pr code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
 .ln-pr .ln-line-why {
   color: #465873;
   font-family: "Source Sans 3", sans-serif;
-  max-width: 36ch;
 }
 .ln-bill { font-size: 16px; line-height: 24px; font-weight: 700; }
 .ln-rules {
@@ -376,12 +387,13 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
 .ln-break-brief {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   direction: ltr;
   text-align: left;
   max-width: 72ch;
 }
-.ln-break-brief article {
+.ln-break-brief article,
+.ln-primer {
   background: #fffcf7;
   border: 1px solid #e4dfd4;
   border-radius: 12px;
@@ -389,10 +401,9 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
   display: grid;
   gap: 8px;
 }
-.ln-break-brief h2 { font-size: 16px; }
-@media (max-width: 800px) {
-  .ln-break-brief { grid-template-columns: 1fr; }
-}
+.ln-break-brief h2,
+.ln-primer h2 { font-size: 16px; }
+.ln-break-brief .ln-task-card { border-color: #e4dfd4; }
 .ln-brief { display: grid; gap: 12px; }
 .ln-brief article {
   background: #fffcf7;
@@ -485,10 +496,4 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
 .ln-stage-fix .ln-editor .ln-btn:hover { background: #F4F7FA; color: #0D1A2B; }
 @media (max-width: 800px) {
   .ln-fix-layout { grid-template-columns: 1fr; }
-  .ln-pr-row {
-    grid-template-columns: auto minmax(0, 1fr);
-    width: 100%;
-  }
-  .ln-pr-row .ln-line-why { grid-column: 2; max-width: none; }
-  .ln-pr code { max-width: none; }
 }

@@ -14,7 +14,7 @@ import type {
 import { createApi } from "../api";
 import { CodeEditor } from "../components/CodeEditor";
 import { fixSpec, isNewLabFile, pickServerFixFile } from "../fix/starters";
-import { BREAK_BRIEF, ENTRY_BRIEF, FIX_CONTRACT, chrome, labCopy, pick } from "../learner/copy";
+import { BREAK_BRIEF, ENTRY_BRIEF, FIX_CONTRACT, chrome, labCopy, pick, type VulnPrimer } from "../learner/copy";
 import { checkName, surface } from "../learner/surface";
 import { useMock, useTo } from "../nav";
 import { getLearnerId } from "../storage";
@@ -478,6 +478,7 @@ export function LabPage() {
 
       {phase === "context" ? (
         <section className="ln-prose">
+          {BREAK_BRIEF[labId] ? <OwaspPrimer primer={BREAK_BRIEF[labId].vuln} /> : null}
           {copy.context.lead.map((line) => (
             <p key={line.en}>{pick(lang, line)}</p>
           ))}
@@ -517,11 +518,8 @@ export function LabPage() {
         <>
           {BREAK_BRIEF[labId] ? (
             <section className="ln-break-brief" dir="ltr">
-              <article>
-                <h2>What you are breaking</h2>
-                <p>{BREAK_BRIEF[labId].vuln}</p>
-              </article>
-              <article>
+              <OwaspPrimer primer={BREAK_BRIEF[labId].vuln} />
+              <article className="ln-task-card">
                 <h2>Your task</h2>
                 <p>{BREAK_BRIEF[labId].task}</p>
               </article>
@@ -729,5 +727,25 @@ function Dialog({
         </div>
       </div>
     </div>
+  );
+}
+
+function OwaspPrimer({ primer }: { primer: VulnPrimer }) {
+  return (
+    <article className="ln-primer">
+      <h2>{primer.title}</h2>
+      <p>
+        <span className="ln-k">What it is</span>
+        {primer.what}
+      </p>
+      <p>
+        <span className="ln-k">Why it happens</span>
+        {primer.why}
+      </p>
+      <p>
+        <span className="ln-k">How it shows up</span>
+        {primer.looks}
+      </p>
+    </article>
   );
 }

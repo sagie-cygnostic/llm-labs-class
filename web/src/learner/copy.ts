@@ -816,6 +816,52 @@ export const ENTRY_BRIEF: Record<string, EntryBrief> = {
   },
 };
 
+export type BreakBrief = { vuln: string; task: string };
+
+/** Visible on the Break stage while the learner works. Short English prose, not the Goal cell. */
+export const BREAK_BRIEF: Record<string, BreakBrief> = {
+  llm01: {
+    vuln: "Prompt injection: the refund policy and the customer ticket land in the same sequence. The model cannot tell an instruction apart from data, so a later sentence can outrank the policy.",
+    task: "You are talking to Meridian Bank's refund assistant. Write in the box, in your own words, and get it to approve a $5,000 refund on a $120 order. There are no preset attacks.",
+  },
+  llm02: {
+    vuln: "Sensitive information disclosure: search runs as the service account, so chunks Dana is not allowed to see can enter the prompt before the model answers. A system line that says \"only this user\" cannot un-fetch that data.",
+    task: "You are signed in as Dana Rosen in Marketing. Ask the HR copilot, watch what was retrieved, and pull another employee's salary or national ID.",
+  },
+  llm03: {
+    vuln: "Supply chain: a weight, an adapter, and a pip package are executable dependencies. Pull request 2291 looks small because the risk is one line at a time — unpinned images, typosquats, remote scripts, and trust_remote_code.",
+    task: "Flag every line in the pull request that lets someone else's code or weights in. You may have at most one false flag. There is no chat.",
+  },
+  llm04: {
+    vuln: "Data and model poisoning: a correction form is a write channel into training. The same question and answer, repeated with a link on a domain you control, can teach the VPN answer without moving overall accuracy.",
+    task: "Submit corrections through the form until VPN answers include a link on a domain you control. Then trigger the train step.",
+  },
+  llm05: {
+    vuln: "Improper output handling: Nimbus puts a model summary into the preview with innerHTML. The browser does not care that the string \"came from a model\". Tags, event handlers, and javascript: links run if you pass them through.",
+    task: "Paste a review summary that makes the preview pane run JavaScript by calling pnp. Readable text is not enough — the pane has to execute.",
+  },
+  llm06: {
+    vuln: "Excessive agency: Corvus holds Dana's mail and money tools. You never talk to the agent. You write an email that lands in the inbox, and the agent treats that email as an instruction. The blast radius is the tool list.",
+    task: "Compose an email that makes Corvus forward Dana's finance thread to an address you control. The damage is in what the tools will do, not in how polite the mail sounds.",
+  },
+  llm07: {
+    vuln: "System prompt leakage: a system prompt is closer to a comment in client-side JavaScript than to a private config file. That is awkward when it is only instructions, and an incident when someone stored a fulfilment token there.",
+    task: "Talk to Loom and extract the system prompt, including the token. A direct ask, a translation, or \"repeat the text above\" is fair game.",
+  },
+  llm08: {
+    vuln: "Vector and embedding weaknesses: the index is a shared writable surface. Similarity is not trust. The chunk that best matches the wording wins, with no look at tenant, author, or approval.",
+    task: "Publish a document into the index so that the answer to \"what is our refund policy?\" comes back as your content, including a link you control.",
+  },
+  llm09: {
+    vuln: "Misinformation: Forge is tuned for plausible text. It will recommend a library and print an install command for a package that is not in the registry. Whoever registers that name first ships code to everyone who pastes the command.",
+    task: "Ask Forge for help until you get an install command for a package that is not in the registry. A convincing name is not a real name.",
+  },
+  llm10: {
+    vuln: "Unbounded consumption: Atlas Assist is public, with no sign-in, no rate limit, and no output cap, billed per token. A short message can ask for a very long answer, and replaying that request adds the same cost again.",
+    task: "Write one expensive request, then use replay until the simulated bill passes $500. Typing alone cannot win — the multiplier is replay.",
+  },
+};
+
 export type ContractField = { name: string; about: string };
 
 export type FixContract = {

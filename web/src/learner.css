@@ -216,13 +216,17 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
 .ln-pr-row {
   direction: ltr;
   display: grid;
-  grid-template-columns: 1.25rem minmax(0, 1.45fr) minmax(12rem, 1fr);
-  gap: 8px 12px;
+  grid-template-columns: auto minmax(0, max-content) minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 2px;
   align-items: start;
   justify-items: start;
+  justify-content: start;
   text-align: left;
   padding: 6px 8px;
   border-radius: 8px;
+  width: max-content;
+  max-width: 100%;
 }
 .ln-pr-row input { margin: 2px 0 0; justify-self: start; }
 .ln-pr code, .ln-pr .ln-line-why {
@@ -235,7 +239,12 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
   font-size: 12px;
   line-height: 16px;
 }
-.ln-pr .ln-line-why { color: #465873; font-family: "Source Sans 3", sans-serif; }
+.ln-pr code { max-width: min(52ch, 100%); }
+.ln-pr .ln-line-why {
+  color: #465873;
+  font-family: "Source Sans 3", sans-serif;
+  max-width: 36ch;
+}
 .ln-bill { font-size: 16px; line-height: 24px; font-weight: 700; }
 .ln-rules {
   margin: 0;
@@ -364,6 +373,26 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
   .ln-top { flex-wrap: wrap; }
 }
 
+.ln-break-brief {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  direction: ltr;
+  text-align: left;
+  max-width: 72ch;
+}
+.ln-break-brief article {
+  background: #fffcf7;
+  border: 1px solid #e4dfd4;
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+.ln-break-brief h2 { font-size: 16px; }
+@media (max-width: 800px) {
+  .ln-break-brief { grid-template-columns: 1fr; }
+}
 .ln-brief { display: grid; gap: 12px; }
 .ln-brief article {
   background: #fffcf7;
@@ -456,6 +485,10 @@ html[lang="en"] .learn { font-family: "Source Sans 3", sans-serif; }
 .ln-stage-fix .ln-editor .ln-btn:hover { background: #F4F7FA; color: #0D1A2B; }
 @media (max-width: 800px) {
   .ln-fix-layout { grid-template-columns: 1fr; }
-  .ln-pr-row { grid-template-columns: 1.25rem minmax(0, 1fr); }
-  .ln-pr-row .ln-line-why { grid-column: 2; }
+  .ln-pr-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    width: 100%;
+  }
+  .ln-pr-row .ln-line-why { grid-column: 2; max-width: none; }
+  .ln-pr code { max-width: none; }
 }

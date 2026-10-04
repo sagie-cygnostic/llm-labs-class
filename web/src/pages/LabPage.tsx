@@ -14,7 +14,7 @@ import type {
 import { createApi } from "../api";
 import { CodeEditor } from "../components/CodeEditor";
 import { fixSpec, isNewLabFile, pickServerFixFile } from "../fix/starters";
-import { ENTRY_BRIEF, FIX_CONTRACT, chrome, labCopy, pick } from "../learner/copy";
+import { BREAK_BRIEF, ENTRY_BRIEF, FIX_CONTRACT, chrome, labCopy, pick } from "../learner/copy";
 import { checkName, surface } from "../learner/surface";
 import { useMock, useTo } from "../nav";
 import { getLearnerId } from "../storage";
@@ -515,6 +515,18 @@ export function LabPage() {
 
       {phase === "break" ? (
         <>
+          {BREAK_BRIEF[labId] ? (
+            <section className="ln-break-brief" dir="ltr">
+              <article>
+                <h2>What you are breaking</h2>
+                <p>{BREAK_BRIEF[labId].vuln}</p>
+              </article>
+              <article>
+                <h2>Your task</h2>
+                <p>{BREAK_BRIEF[labId].task}</p>
+              </article>
+            </section>
+          ) : null}
           <BreakPlay
             key={lab.id}
             lab={copy}
